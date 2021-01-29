@@ -1,0 +1,163 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>ArcGIS API for JavaScript Hello World App</title>
+  <style>
+    html, body, #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.17/esri/css/main.css">
+  <script src="https://js.arcgis.com/4.17/"></script>
+
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/layers/WMSLayer",
+      "esri/layers/FeatureLayer",
+      "esri/layers/GraphicsLayer",
+      "esri/Graphic",
+      "esri/tasks/support/Query"
+    ], function(Map, MapView, WMSLayer, FeatureLayer, GraphicsLayer, Graphic, Query) {
+
+      var graphicsLayer = new GraphicsLayer
+
+      // Popup Template
+      var template = {
+        title: "{BUILDINGID}",
+        content: [ {
+          type: "fields",
+          fieldInfos: [{
+            fieldName: "BUILDINGID",
+            label: "Building Name:"
+          },
+          {
+            fieldName: "NUMBER",
+            label: "Building Number:"
+          },
+          {
+            fieldName: "SHORTNAME",
+            label: "Building Code:"
+          }
+          ]
+        }
+        ]
+      }
+
+      // Initializaing or creating a Feature Layer
+      const featurelayer = new FeatureLayer ({
+        url: "https://localhost:6443/arcgis/rest/services/Campusmap/MapServer/3",
+        popupTemplate: template
+      });
+
+      ///queryextent method
+
+      const query = new Query();
+      query.where = query.where + " AND number = '2815'";
+
+      featurelayer.queryExtent(query).then(function(results){
+        view.goTo(results.extent);
+      });
+
+      // WMS Layer calling one sublayer
+      var buildingslayer = new WMSLayer({
+        url: "https://localhost:6443/arcgis/services/Campusmap/MapServer/WMSServer",
+        sublayers: [{
+          name: 0
+        }]
+      });
+
+      var parkinglotslayer = new WMSLayer({
+        url: "https://localhost:6443/arcgis/services/Campusmap/MapServer/WMSServer",
+        sublayers: [{
+          name: 1
+        }]
+      });
+
+      var streetslayer = new WMSLayer({
+        url: "https://localhost:6443/arcgis/services/Campusmap/MapServer/WMSServer",
+        sublayers: [{
+          name: 2
+        }]
+      });
+
+      var sidewalklayer = new WMSLayer({
+        url: "https://localhost:6443/arcgis/services/Campusmap/MapServer/WMSServer",
+        sublayers: [{
+          name: 3
+        }]
+      });
+
+      //WMS Layer calling all sublayer
+      // const layer = new WMSLayer({
+      //   url: "https://localhost:6443/arcgis/services/Campusmap/MapServer/WMSServer"
+      // });
+      //
+      // layer.load().then(() => {
+      //   const names = layer.allSublayers
+      //                      .filter((sublayer) => !sublayer.sublayers)
+      //                      .map((sublayer) => sublayer.name);
+      //   console.log("Names of all child sublayers", names.join());
+      // });
+
+      var map = new Map({
+        basemap: "topo-vector",
+        layers: [featurelayer, graphicsLayer]
+      });
+
+      var view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: [-96.7859298,44.3219388],
+        zoom: 15.5
+      });
+
+      //Get a query object for the layer's current configuration
+      //queryParams.outFields will be set to ["*"] to get values
+      //for all available fields.
+      const queryParams = featurelayer.createQuery();
+      // set a geometry for filtering features by a region of interest
+      queryParams.geometry = featurelayer.extent;
+      // Add to the layer's current definitionExpression
+      queryParams.where = queryParams.where + " AND number = '2815'";
+
+      function addGraphics(result){
+        graphicsLayer.removeAll();
+        result.features.forEach(function (feature){
+          var g = new Graphic ({
+            geometry: feature.geometry,
+            attributes: feature.attributes,
+            symbol: {
+              type: "simple-fill",
+              color: [14, 48, 105],
+              outline: {
+                width: 2,
+                color: [252, 252, 252]
+              },
+              size: "120px"
+            }
+          });
+          graphicsLayer.add(g);
+        });
+      }
+
+      // query the layer with the modified params object
+      featurelayer.queryFeatures(queryParams).then(function(result){
+
+        // prints the array of result graphics to the console
+        addGraphics(result, true);        
+      });
+
+    });
+  </script>
+</head>
+<body>
+  <div id="viewDiv"></div>
+</body>
+</html>
